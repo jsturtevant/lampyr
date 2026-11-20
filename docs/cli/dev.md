@@ -151,6 +151,10 @@ explicitly exposed service. This is development access control, not a production
 tenant isolation or network-policy equivalence claim. Host-IP allowlisting
 is coarser than per-port isolation.
 
+Local bindings keep the capability in root-relative and path-relative
+redirects. Path-relative redirects use the application request path, without
+the capability prefix. External and protocol-relative redirects do not change.
+
 Fresh-per-request is the default for HTTP and direct CloudEvents. Explicit
 `execution.mode: reuse` retains revision-scoped live state until
 `execution.idleTimeout`. Streams keep their Fiber until completion or client
@@ -166,13 +170,13 @@ never be copied to a different architecture or hypervisor for deployment.
 
 ### Executable multi-service example
 
-`samples/local-worker-workspace/` contains dependency-free Node.js
+`demos/local-worker-workspace/` contains dependency-free Node.js
 Standalone Applications. Its API has several
 HTTP handlers, calls a fresh processor, emits a CloudEvent to that processor,
 and calls a service explicitly configured for reuse:
 
 ```bash
-ly dev samples/local-worker-workspace
+ly dev demos/local-worker-workspace
 curl http://worker-api.default.localhost:8080/invoke
 curl http://worker-api.default.localhost:8080/emit
 curl http://worker-api.default.localhost:8080/reuse
@@ -230,6 +234,12 @@ python3 tests/contracts/test_worker_workspace.py \
   --url https://YOUR_CLUSTER_INGRESS --host worker-api.default.YOUR_DOMAIN
 ```
 
+To also check processor and reused services through ingress, expose all three
+services in `ingress.services`, redeploy them, and add `--direct-services`.
+Each request uses its service hostname for TLS SNI, certificate checks, and
+HTTP Host. An optional hostname port stays in HTTP Host, not TLS SNI.
+`--url` sets the connection address and port; `--host` does not change them.
+
 Only for a test cluster with a self-signed certificate, add `--insecure`.
 The runner checks fresh state, bindings, event content, explicit reuse and
 idle reset, errors, streaming, and client cancellation. The unchanged runner
@@ -269,7 +279,7 @@ No Hyperlight source checkout, Cargo overrides or runtime descriptor is needed:
 
 ```bash
 just build-ly
-build/ly dev samples/local-worker-workspace --port 8080
+build/ly dev demos/local-worker-workspace --port 8080
 ```
 
 Lampyr downloads and verifies the released v0.21.0 executable and matching
